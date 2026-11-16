@@ -1,0 +1,21 @@
+replicaCount: 2
+
+image:
+  repository: ""   # set by Terraform from the ECR repository 
+  tag: "0.1.0"
+
+service:
+  port: 80
+  targetPort: 8080
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+# Needs the Prometheus Operator CRDs, enabled once monitoring is installed
+serviceMonitor:
+  enabled: false
