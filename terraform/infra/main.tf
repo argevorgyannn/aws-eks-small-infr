@@ -63,3 +63,12 @@ module "eks" {
     }
   }
 }
+
+resource "aws_ecr_repository" "app" {
+  name         = "demo-app"
+  force_delete = true # option to be able to cleanup easily after
+
+  image_scanning_configuration {
+    scan_on_push = true
+  }
+}
