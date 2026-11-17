@@ -1,0 +1,7 @@
+region: eu-north-1
+
+# Name of the secret in AWS Secrets Manager 
+remoteKey: eks-task/grafana
+
+# Name of the Kubernetes Secret that is created from it
+secretName: grafana-secrets

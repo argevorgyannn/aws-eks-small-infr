@@ -16,6 +16,12 @@ resources:
     cpu: 500m
     memory: 256Mi
 
+# Public access through an AWS ALB (needs the AWS Load Balancer Controller),
+# values are set by Terraform
+ingress:
+  enabled: false
+  albName: ""
+
 # Needs the Prometheus Operator CRDs, enabled once monitoring is installed
 serviceMonitor:
   enabled: false

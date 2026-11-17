@@ -1,0 +1,164 @@
+# alerts are done in grafana
+alertmanager:
+  enabled: false
+
+grafana:
+  defaultDashboardsTimezone: browser
+  # login and password fetched from aws sm
+  admin:
+    existingSecret: grafana-secrets
+    userKey: admin-user
+    passwordKey: admin-password
+  # Slack webhook fetched from aws sm
+  envValueFrom:
+    SLACK_WEBHOOK_URL:
+      secretKeyRef:
+        name: grafana-secrets
+        key: slack-webhook-url
+  resources:
+    requests:
+      cpu: 100m
+      memory: 192Mi
+  # scrape logs via loki
+  additionalDataSources:
+    - name: Loki
+      uid: loki
+      type: loki
+      access: proxy
+      url: http://loki.monitoring.svc.cluster.local:3100
+
+  # Grafana alerting provisioned from code
+  alerting:
+    contactpoints.yaml:
+      apiVersion: 1
+      contactPoints:
+        - orgId: 1
+          name: slack
+          receivers:
+            - uid: slack-alerts
+              type: slack
+              settings:
+                url: $SLACK_WEBHOOK_URL
+
+    policies.yaml:
+      apiVersion: 1
+      policies:
+        - orgId: 1
+          receiver: slack
+          group_by: ["alertname", "pod"]
+          repeat_interval: 4h
+
+    rules.yaml:
+      apiVersion: 1
+      groups:
+        - orgId: 1
+          name: demo-app
+          folder: Demo App
+          interval: 1m
+          rules:
+            - uid: demo-app-high-cpu
+              title: High CPU usage
+              condition: C
+              for: 2m
+              noDataState: OK
+              execErrState: Error
+              labels:
+                severity: warning
+              annotations:
+                summary: CPU usage of a demo-app pod is above 80% of its limit
+              data:
+                - refId: A
+                  relativeTimeRange:
+                    from: 300
+                    to: 0
+                  datasourceUid: prometheus
+                  model:
+                    refId: A
+                    instant: true
+                    expr: sum by (pod) (rate(container_cpu_usage_seconds_total{namespace="demo",container="app"}[2m])) / sum by (pod) (kube_pod_container_resource_limits{namespace="demo",container="app",resource="cpu"}) * 100
+                - refId: B
+                  datasourceUid: __expr__
+                  model:
+                    refId: B
+                    type: reduce
+                    expression: A
+                    reducer: last
+                - refId: C
+                  datasourceUid: __expr__
+                  model:
+                    refId: C
+                    type: threshold
+                    expression: B
+                    conditions:
+                      - evaluator:
+                          type: gt
+                          params: [80]
+
+            - uid: demo-app-high-memory
+              title: High memory usage
+              condition: C
+              for: 2m
+              noDataState: OK
+              execErrState: Error
+              labels:
+                severity: warning
+              annotations:
+                summary: Memory usage of a demo-app pod is above 80% of its limit
+              data:
+                - refId: A
+                  relativeTimeRange:
+                    from: 300
+                    to: 0
+                  datasourceUid: prometheus
+                  model:
+                    refId: A
+                    instant: true
+                    expr: sum by (pod) (container_memory_working_set_bytes{namespace="demo",container="app"}) / sum by (pod) (kube_pod_container_resource_limits{namespace="demo",container="app",resource="memory"}) * 100
+                - refId: B
+                  datasourceUid: __expr__
+                  model:
+                    refId: B
+                    type: reduce
+                    expression: A
+                    reducer: last
+                - refId: C
+                  datasourceUid: __expr__
+                  model:
+                    refId: C
+                    type: threshold
+                    expression: B
+                    conditions:
+                      - evaluator:
+                          type: gt
+                          params: [80]
+
+prometheus:
+  prometheusSpec:
+    retention: 2d
+    # Pick up ServiceMonitors from every namespace, not only this release
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    resources:
+      requests:
+        cpu: 200m
+        memory: 512Mi
+      limits:
+        memory: 1Gi
+
+
+kubeEtcd:
+  enabled: false
+kubeControllerManager:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeProxy:
+  enabled: false
+
+defaultRules:
+  rules:
+    etcd: false
+    kubeControllerManager: false
+    kubeSchedulerAlerting: false
+    kubeSchedulerRecording: false
+    kubeProxy: false

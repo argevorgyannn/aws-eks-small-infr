@@ -1,0 +1,5 @@
+apiVersion: v2
+name: app-dashboard
+description: Grafana dashboard for demo-app, loaded by the Grafana sidecar
+type: application
+version: 0.1.0

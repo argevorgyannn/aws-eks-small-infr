@@ -1,0 +1,5 @@
+apiVersion: v2
+name: secrets-config
+description: Connects External Secrets Operator to AWS Secrets Manager and syncs the Grafana secret
+type: application
+version: 0.1.0
